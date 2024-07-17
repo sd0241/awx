@@ -161,6 +161,10 @@
       loop:
         - /root/user-data
         - /root/meta-data
-        - "{{ penta_vm | dict2items | map(attribute='value.cloud_init_iso') | list }}"
-      loop_control:
-        label: "{{ item }}"
+        
+    - name: Clean up cloud_init_iso files
+      file:
+        path: "{{ item.value.cloud_init_iso }}"
+        state: absent
+      loop: "{{ penta_vm | dict2items }}"
+      when: item.value.cloud_init_iso is defined
