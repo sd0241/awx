@@ -11,5 +11,5 @@ collections:
     version: 2.1.0
 
 
-
-
+galaxy_options:
+  ignore_certs: yes
