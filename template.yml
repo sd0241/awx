@@ -161,5 +161,6 @@
       loop:
         - /root/user-data
         - /root/meta-data
-        - "{{ item.value.cloud_init_iso }}"
-      with_dict: "{{ penta_vm }}"
+        - "{{ penta_vm | dict2items | map(attribute='value.cloud_init_iso') | list }}"
+      loop_control:
+        label: "{{ item }}"
