@@ -18,7 +18,7 @@
             shell: /bin/bash
             lock_passwd: true
             ssh_authorized_keys:
-              - "{{ ssh_public_key }}"
+              - "{{ item.value.ssh_public_key }}"
           runcmd:
           - 'systemctl disable --now firewalld.service'
           - 'nmcli con add con-name "{{ item.value.network_name }}" ifname enp1s0 type ethernet connection.autoconnect yes'
@@ -47,18 +47,19 @@
         dest: /root/meta-data
 
     - name: Generate cloud-init ISO
-      command: genisoimage -output {{ cloud_init_iso }} -volid cidata -joliet -rock /root/user-data /root/meta-data
-
+      command: genisoimage -output {{ item.value.cloud_init_iso }} -volid cidata -joliet -rock /root/user-data /root/meta-data
+      with_dict: "{{ penta_vm }}"
+      
     - name: Clone VM
       command: >
         virt-clone
         --original "{{ item.value.source_vm }}"
-        --name "{{ item.new_vm_name }}"
+        --name "{{ item.value.new_vm_name }}"
         --auto-clone
       with_dict: "{{ penta_vm }}"
 
     - name: Get cloned VM disk path
-      command: virsh domblklist --domain "{{ new_vm_name }}"
+      command: virsh domblklist --domain "{{ ttem.value.new_vm_name }}"
       register: domblklist_output
       with_dict: "{{ penta_vm }}"
 
