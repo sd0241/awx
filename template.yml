@@ -59,7 +59,7 @@
       with_dict: "{{ penta_vm }}"
 
     - name: Get cloned VM disk path
-      command: virsh domblklist --domain "{{ ttem.value.new_vm_name }}"
+      command: virsh domblklist --domain "{{ item.value.new_vm_name }}"
       register: domblklist_output
       with_dict: "{{ penta_vm }}"
 
