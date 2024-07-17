@@ -1,0 +1,165 @@
+---
+- name: Clone RHEL 8 VM and apply cloud-init
+  hosts: server
+  vars_files:
+    - /root/template_vm/vars/vm_vars.yml
+
+  tasks:
+    - name: Create cloud-init user-data file
+      copy:
+        content: |
+          #cloud-config
+          network: {config: disabled}
+          users:
+          - default
+          - name: admin
+            groups: wheel
+            sudo: ALL=(ALL) NOPASSWD:ALL
+            shell: /bin/bash
+            lock_passwd: true
+            ssh_authorized_keys:
+              - "{{ ssh_public_key }}"
+          runcmd:
+          - 'systemctl disable --now firewalld.service'
+          - 'nmcli con add con-name "{{ item.value.network_name }}" ifname enp1s0 type ethernet connection.autoconnect yes'
+          - 'nmcli con mod "{{ item.value.network_name }}" ipv4.address "{{ item.value.ip_address }}/24" ipv4.gateway "{{ item.value.gateway }}" ipv4.dns "{{ item.value.dns }}" ipv4.method manual'
+          - 'nmcli con down "{{ item.value.network_name }}"'
+          - 'nmcli con up "{{ item.value.network_name }}"'
+          - 'timedatectl set-timezone Asia/Seoul'
+          - 'sed -i "s/^PasswordAuthentication no/PasswordAuthentication yes/" /etc/ssh/sshd_config'
+          - 'sed -i "/server .* iburst/d" /etc/chrony.conf'
+          - 'sed -i "/^# Please consider.*$/a\server time.bora.net iburst" /etc/chrony.conf'
+          - 'chmod o-rwx /usr/bin/su'
+          - 'sed -i "s/SELINUX=enforcing/SELINUX=disabled/" /etc/selinux/config'
+          - 'setenforce 0'
+          - 'sed -i "s/^PASS_MAX_DAYS.*$/PASS_MAX_DAYS   90/" /etc/login.defs'
+          - 'sed -i "s/^PASS_MIN_LEN.*$/PASS_MIN_LEN    9/" /etc/login.defs'
+          - 'touch /etc/cloud/cloud-init.disabled'
+
+        dest: /root/user-data
+      with_dict: "{{ penta_vm }}"
+
+    - name: Create cloud-init meta-data file
+      copy:
+        content: |
+          instance-id: "kdg_vm"
+          local-hostname: myuser
+        dest: /root/meta-data
+
+    - name: Generate cloud-init ISO
+      command: genisoimage -output {{ cloud_init_iso }} -volid cidata -joliet -rock /root/user-data /root/meta-data
+
+    - name: Clone VM
+      command: >
+        virt-clone
+        --original "{{ item.value.source_vm }}"
+        --name "{{ item.new_vm_name }}"
+        --auto-clone
+      with_dict: "{{ penta_vm }}"
+
+    - name: Get cloned VM disk path
+      command: virsh domblklist --domain "{{ new_vm_name }}"
+      register: domblklist_output
+      with_dict: "{{ penta_vm }}"
+
+    - name: Extract disk path
+      set_fact:
+        vm_disk_path: "{{ domblklist_output.stdout_lines[2].split()[1] }}"
+
+    - name: Get current disk size
+      command: qemu-img info --output json "{{ item.value.vm_disk_path }}"
+      register: disk_info
+      with_dict: "{{ penta_vm }}"
+
+    - name: Parse disk info JSON
+      set_fact:
+        parsed_disk_info: "{{ disk_info.stdout | from_json }}"
+
+    - name: Set current & desire disk size
+      set_fact:
+        current_size: "{{ parsed_disk_info['virtual-size'] | int}}"
+        desired_size: "{{ item.value.disk_size }}G"
+      with_dict: "{{ penta_vm }}"
+
+    - debug:
+        var: current_size
+        var: desired_size
+
+    - name: Compare desired size with current size
+      set_fact:
+        size_difference: "{{ (desired_size | human_to_bytes) - (current_size | int) | int}}"
+
+    - debug:
+        var: size_difference
+
+    - name: Resize qcow2 image
+      command: >
+        qemu-img resize 
+        {{ '--shrink' if (size_difference | int) < 0 else '' }}
+        "{{ item.value.vm_disk_path }}" {{ desired_size }}
+      vars:
+        desired_size: "{{ item.value.disk_size }}G"
+      with_dict: "{{ penta_vm }}"
+      when: size_difference != 0
+
+    - name: Warn about shrink operation
+      debug:
+        msg: "Warning: You are about to shrink the disk. This may result in data loss."
+      when: (size_difference | int) < 0
+
+    - name: Confirm shrink operation
+      pause:
+        prompt: "Type 'yes' to continue with the shrink operation, or 'no' to cancel"
+      register: shrink_confirmation
+      when: (size_difference | int) < 0
+
+    - name: Resize qcow2 image (including shrink if confirmed)
+      command: >
+        qemu-img resize --shrink
+        "{{ item.value.vm_disk_path }}" {{ desired_size }}
+      when: 
+        - (size_difference | int) < 0
+        - shrink_confirmation.user_input | default('no') == 'yes'
+      with_dict: "{{ penta_vm }}"
+
+    - name: Set VM memory
+      command: virsh setmaxmem {{ item.value.new_vm_name }} {{ item.value.memory_gb | int * 2 }}G --config
+      with_dict: "{{ penta_vm }}"
+
+    - name: Set VM current memory
+      command: virsh setmem {{ item.value.new_vm_name }} {{ item.value.memory_gb }}G --config
+      with_dict: "{{ penta_vm }}"
+
+    - name: Set VM CPUs
+      command: virsh setvcpus {{ item.value.new_vm_name }} {{ item.value.vcpus }} --config --maximum
+      with_dict: "{{ penta_vm }}"
+
+    - name: Attach cloud-init ISO
+      command: virsh attach-disk {{ item.value.new_vm_name }} {{ item.value.cloud_init_iso }} sdb --type cdrom --mode readonly --config
+      with_dict: "{{ penta_vm }}"
+
+    - name: Start VM
+      virt:
+        name: "{{ item.value.new_vm_name }}"
+        state: running
+      with_dict: "{{ penta_vm }}"
+
+    - name: Wait for VM to boot
+      pause:
+        minutes: 1
+
+    - name: Detach cloud-init ISO
+      command: virsh detach-disk {{ item.value.new_vm_name }} sdb --config
+      delay: 10
+      with_dict: "{{ penta_vm }}"
+
+
+    - name: Clean up temporary files
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /root/user-data
+        - /root/meta-data
+        - "{{ item.value.cloud_init_iso }}"
+      with_dict: "{{ penta_vm }}"
