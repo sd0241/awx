@@ -1,0 +1,20 @@
+---
+collections:
+  # Private Automation Hub에서 community.libvirt 컬렉션 가져오기
+  - name: community.libvirt
+    source: https://192.168.50.202/api/galaxy/
+    version: 1.2.0
+
+  # 다른 Private Automation Hub 컬렉션
+  - name: your_organization.your_collection
+    source: https://192.168.50.202/api/galaxy/
+    version: 2.1.0
+
+  # 공식 Ansible Galaxy에서 컬렉션 가져오기
+  - name: ansible.posix
+    source: https://galaxy.ansible.com
+
+roles:
+  # Private Automation Hub에서 역할 가져오기
+  - name: your_organization.example_role
+    source: https://192.168.50.202/api/galaxy/
