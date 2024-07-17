@@ -12,7 +12,4 @@ collections:
 
 
 
-roles:
-  # Private Automation Hub에서 역할 가져오기
-  - name: your_organization.example_role
-    source: https://192.168.50.202/api/galaxy/
+
