@@ -1,0 +1,7 @@
+collections:
+  - name: community.libvirt
+    source: hhttps://192.168.50.202/api/galaxy/content/rh-certified/
+
+  - name: community.general
+    source: https://192.168.50.202/api/galaxy/content/rh-certified/
+    
