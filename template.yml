@@ -139,7 +139,7 @@
       with_dict: "{{ penta_vm }}"
 
     - name: Start VM
-      virt:
+      community.libvirt.virt:
         name: "{{ item.value.new_vm_name }}"
         state: running
       with_dict: "{{ penta_vm }}"
