@@ -6,7 +6,7 @@ collections:
     version: 1.2.0
 
   # 다른 Private Automation Hub 컬렉션
-  - name: your_organization.your_collection
+  - name: community.general
     source: https://192.168.50.202/api/galaxy/
     version: 2.1.0
 
