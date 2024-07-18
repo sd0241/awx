@@ -148,8 +148,7 @@
     
     - name: Rename optimized image to original name
       command: >
-        mv "{{ convert_image }}" "{{ vm_disk_path.vm }}"
-        mv "{{ vm_disk_path.vm }}" "{{ item.value.disk_path}}/{{ item.value.qcow_name }}.{{ item.value.file_type }}"
+        mv "{{ convert_image }}"  "{{ item.value.disk_path}}/{{ item.value.qcow_name }}.{{ item.value.file_type }}"
       when: optimize_needed and optimize_result.rc == 0
       with_dict: "{{ penta_vm }}"
       
@@ -187,8 +186,7 @@
     
     - name: Rename expand image to original name
       command: > 
-          mv "{{ expand_image }}" "{{ vm_disk_path.vm }}"
-          mv "{{ vm_disk_path.vm }}" "{{ item.value.disk_path}}/{{ item.value.qcow_name }}.{{ item.value.file_type }}"
+          mv "{{ expand_image }}" "{{ item.value.disk_path}}/{{ item.value.qcow_name }}.{{ item.value.file_type }}"
       when: expansion_needed and expansion_result.rc == 0
       with_dict: "{{ penta_vm }}"
       
