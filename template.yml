@@ -1,9 +1,6 @@
 ---
 - name: Clone RHEL 8 VM and apply cloud-init
   hosts: server
-  vars_files:
-    - /root/template_vm/vars/vm_vars.yml
-
   tasks:
     - name: Create cloud-init user-data file
       copy:
@@ -111,34 +108,35 @@
     - debug:
         var: size_difference
 
-    - name: Resize qcow2 image
-      command: >
-        qemu-img resize 
-        {{ '--shrink' if (size_difference | int) < 0 else '' }}
-        "{{ vm_disk_path.vm }}" {{ desired_size }}
-      vars:
-        desired_size: "{{ item.value.disk_size }}G"
-      with_dict: "{{ penta_vm }}"
-      when: size_difference != 0
 
-    - name: Warn about shrink operation
+    - name: Check if disk optimization is needed
+      set_fact:
+        optimize_needed: "{{ (size_difference | int) < 0 }}"
+
+    - name: Log optimization requirement
       debug:
-        msg: "Warning: You are about to shrink the disk. This may result in data loss."
-      when: (size_difference | int) < 0
+        msg: "Disk optimization is recommended due to size difference."
+      when: optimize_needed
 
-    - name: Confirm shrink operation
-      pause:
-        prompt: "Type 'yes' to continue with the shrink operation, or 'no' to cancel"
-      register: shrink_confirmation
-      when: (size_difference | int) < 0
+    - name: Create temporary file name for optimized image
+      set_fact:
+        convert_image: "{{ vm_disk_path.vm | dirname }}/{{ vm_disk_path.vm | basename }}_less"
+      when: optimize_needed
 
-    - name: Resize qcow2 image (including shrink if confirmed)
+    - name: Optimize qcow2 image (convert to thin provisioning)
       command: >
-        qemu-img resize --shrink
-        "{{ vm_disk_path.vm }}" {{ desired_size }}
-      when: 
-        - (size_difference | int) < 0
-        - shrink_confirmation.user_input | default('no') == 'yes'
+        qemu-img convert -O qcow2 -o preallocation=off "{{ vm_disk_path.vm }}" "{{ convert_image }}"
+      when: optimize_needed
+
+    - name: Replace original image with optimized image
+      command: mv "{{ convert_image }}" "{{ vm_disk_path.vm }}"
+      when: optimize_needed
+
+    - name: Resize qcow2 image (if expansion is needed)
+      command: >
+        qemu-img resize "{{ vm_disk_path.vm }}" {{ desired_size }}
+      when: (size_difference | int) > 0
+
 
     - name: Set VM memory
       command: virsh setmaxmem {{ item.value.new_vm_name }} {{ item.value.memory_gb | int * 2 }}G --config
@@ -163,8 +161,7 @@
       with_dict: "{{ penta_vm }}"
 
     - name: Wait for VM to boot
-      pause:
-        minutes: 1
+      delay: 10
 
     - name: Detach cloud-init ISO
       command: virsh detach-disk {{ item.value.new_vm_name }} sdb --config
