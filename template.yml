@@ -147,10 +147,10 @@
         state: absent
       when: optimize_needed and optimize_result.rc == 0
     
-    - name: Rename optimized image to original name
-      command: >
-        mv "{{ convert_image }}"  "{{ vm_disk_path }}"
-      when: optimize_needed and optimize_result.rc == 0
+    #- name: Rename optimized image to original name
+      #command: >
+       # mv "{{ convert_image }}"  "{{ vm_disk_path }}"
+      #when: optimize_needed and optimize_result.rc == 0
      # with_dict: "{{ penta_vm }}"
       
     - name: Create temporary file name for expansiond image
@@ -186,11 +186,7 @@
         state: absent
       when: expansion_needed and expansion_result.rc == 0
     
-    - name: Rename expand image to original name
-      command: > 
-          mv "{{ expand_image }}" "{{ vm_disk_path }}"
-      when: expansion_needed and expansion_result.rc == 0
-      with_dict: "{{ penta_vm }}"
+
       
     - name: If the image is the same size
       command: mv "{{ vm_disk_path.vm }}" "{{ item.value.disk_path}}/{{ item.value.qcow_name }}.{{ item.value.file_type }}"
