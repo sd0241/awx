@@ -160,12 +160,10 @@
         state: running
       with_dict: "{{ penta_vm }}"
 
-    - name: Wait for VM to boot
-      delay: 10
 
     - name: Detach cloud-init ISO
       command: virsh detach-disk {{ item.value.new_vm_name }} sdb --config
-      delay: 10
+      delay: 15
       with_dict: "{{ penta_vm }}"
 
     - name: Clean up temporary files
