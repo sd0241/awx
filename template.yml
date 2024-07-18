@@ -39,8 +39,8 @@
     - name: Create cloud-init meta-data file
       copy:
         content: |
-          instance-id: "kdg_vm"
-          local-hostname: myuser
+          instance-id: "penta_vm"
+          local-hostname: user
         dest: /root/meta-data
 
     - name: Generate cloud-init ISO
@@ -125,7 +125,7 @@
       when: optimize_needed
 
     - name: Replace original image with optimized image
-      command: mv "{{ vm_disk_path.vm | dirname }}/{{ convert_image }}" "{{ vm_disk_path.vm | dirname }}/{{ item.value.qcow_name }}.qcow2"
+      command: mv "{{ vm_disk_path.vm | dirname }}/{{ convert_image }}" "{{ vm_disk_path.vm | dirname }}/{{ item.value.qcow_name }}.{{ item.value.file_type }}"
       when: optimize_needed
       with_dict: "{{ penta_vm }}"
       
@@ -140,12 +140,12 @@
       when: expansion_needed
 
     - name: Replace original image with expansioned image
-      command: mv "{{ vm_disk_path.vm | dirname }}/{{ expand_image }}" "{{ vm_disk_path.vm | dirname }}/{{ item.value.qcow_name }}.qcow2"
+      command: mv "{{ vm_disk_path.vm | dirname }}/{{ expand_image }}" "{{ vm_disk_path.vm | dirname }}/{{ item.value.qcow_name }}.{{ item.value.file_type }}"
       when: expansion_needed
       with_dict: "{{ penta_vm }}"
 
     - name: If the image is the same size
-      command: mv "{{ vm_disk_path.vm | dirname }}/{{ vm.disk_path.vm }}" "{{ vm_disk_path.vm | dirname }}/{{ item.value.qcow_name }}.qcow2"
+      command: mv "{{ vm_disk_path.vm | dirname }}/{{ vm.disk_path.vm }}" "{{ vm_disk_path.vm | dirname }}/{{ item.value.qcow_name }}.{{ item.value.file_type }}"
       when:  "{{ (size_difference | int) == 0 }}" 
       
       
