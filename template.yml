@@ -165,13 +165,13 @@
       when: expansion_needed
       register: expansion_result
 
-    - name: Get current VM configuration
+    - name: Get current VM configuration(expand)
       virt:
         command: get_xml
         name: "{{ item.value.new_vm_name }}"
       register: vm_xml
       with_dict: "{{ penta_vm }}"
-      when: optimize_needed
+      when: expansion_needed
       
     - name: Update VM configuration with new disk image
       virt:
