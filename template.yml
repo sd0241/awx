@@ -49,7 +49,6 @@
     - name: Generate cloud-init ISO
       command: genisoimage -output {{ item.value.cloud_init_iso }} -volid cidata -joliet -rock /root/user-data /root/meta-data
       with_dict: "{{ penta_vm }}"
-      
     - name: Clone VM
       command: >
         virt-clone
@@ -63,14 +62,33 @@
       register: domblklist_output
       with_dict: "{{ penta_vm }}"
 
+
+    - name: Debug disk path
+      debug:
+        msg: "{{ domblklist_output.results }}"
+
     - name: Extract disk path
       set_fact:
-        vm_disk_path: "{{ domblklist_output.stdout_lines[2].split()[1] }}"
+        vm_disk_path: "{{ vm_disk_paths  | default({}) | combine({item.item.key: item.stdout_lines[2].split()[1]}) }}"
+      loop: "{{ domblklist_output.results | list }}"
+      when: item.stdout_lines | length > 2
+
+    - name: Debug extracted disk paths
+      debug:
+        var: vm_disk_path
+
+    - name: Get disk info for all VMs
+      command: qemu-img info --output json "{{ vm_disk_path.vm }}"
+      register: disk_info_outputs
+      #loop: "{{ vm_disk_path.vm | dict2items }}"
+
+    - name: Debug all disk info
+      debug:
+        var: disk_info_outputs
 
     - name: Get current disk size
-      command: qemu-img info --output json "{{ item.value.vm_disk_path }}"
+      command: qemu-img info --output json "{{ vm_disk_path.vm }}"
       register: disk_info
-      with_dict: "{{ penta_vm }}"
 
     - name: Parse disk info JSON
       set_fact:
@@ -97,7 +115,7 @@
       command: >
         qemu-img resize 
         {{ '--shrink' if (size_difference | int) < 0 else '' }}
-        "{{ item.value.vm_disk_path }}" {{ desired_size }}
+        "{{ vm_disk_path.vm }}" {{ desired_size }}
       vars:
         desired_size: "{{ item.value.disk_size }}G"
       with_dict: "{{ penta_vm }}"
@@ -117,11 +135,10 @@
     - name: Resize qcow2 image (including shrink if confirmed)
       command: >
         qemu-img resize --shrink
-        "{{ item.value.vm_disk_path }}" {{ desired_size }}
+        "{{ vm_disk_path.vm }}" {{ desired_size }}
       when: 
         - (size_difference | int) < 0
         - shrink_confirmation.user_input | default('no') == 'yes'
-      with_dict: "{{ penta_vm }}"
 
     - name: Set VM memory
       command: virsh setmaxmem {{ item.value.new_vm_name }} {{ item.value.memory_gb | int * 2 }}G --config
@@ -153,7 +170,6 @@
       command: virsh detach-disk {{ item.value.new_vm_name }} sdb --config
       delay: 10
       with_dict: "{{ penta_vm }}"
-
 
     - name: Clean up temporary files
       file:
