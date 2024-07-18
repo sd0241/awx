@@ -74,14 +74,6 @@
       debug:
         var: vm_disk_path
 
-    - name: Get disk info for all VMs
-      command: qemu-img info --output json "{{ vm_disk_path.vm }}"
-      register: disk_info_outputs
-      #loop: "{{ vm_disk_path.vm | dict2items }}"
-
-    - name: Debug all disk info
-      debug:
-        var: disk_info_outputs
 
     - name: Get current disk size
       command: qemu-img info --output json "{{ vm_disk_path.vm }}"
@@ -113,6 +105,10 @@
       set_fact:
         optimize_needed: "{{ (size_difference | int) < 0 }}"
 
+    - name: Set Expansion disk
+      set_fact:
+        expansion_needed: "{{ (size_difference | int) > 0 }}" 
+
     - name: Log optimization requirement
       debug:
         msg: "Disk optimization is recommended due to size difference."
@@ -120,9 +116,8 @@
 
     - name: Create temporary file name for optimized image
       set_fact:
-        convert_image: "{{ vm_disk_path.vm | dirname }}/{{ item.value.qcow_name }}"
+        convert_image: "{{ vm_disk_path.vm | dirname }}/{{ vm_disk_path.vm | basename }}_less"
       when: optimize_needed
-      with_dict: "{{ penta_vm }}"
       
     - name: Optimize qcow2 image (convert to thin provisioning)
       command: >
@@ -130,15 +125,25 @@
       when: optimize_needed
 
     - name: Replace original image with optimized image
-      command: mv "{{ convert_image }}" "{{ vm_disk_path.vm }}"
+      command: mv "{{ convert_image }}" "{{ item.value.qcow_name }}.qcow2"
       when: optimize_needed
-
+      with_dict: "{{ penta_vm }}"
+      
+    - name: Create temporary file name for expansiond image
+      set_fact:
+        expand_image: "{{ vm_disk_path.vm }}"
+      when: expansion_needed
+      
     - name: Resize qcow2 image (if expansion is needed)
       command: >
-        qemu-img resize "{{ vm_disk_path.vm }}" {{ desired_size }}
-      when: (size_difference | int) > 0
+        qemu-img resize "{{ expannd_image }}" {{ desired_size }}
+      when: expansion_needed
 
-
+    - name: Replace original image with expansioned image
+      command: mv "{{ expand_image }}" "{{ item.value.qcow_name }}.qcow2"
+      when: expansion_needed
+      with_dict: "{{ penta_vm }}"
+    
     - name: Set VM memory
       command: virsh setmaxmem {{ item.value.new_vm_name }} {{ item.value.memory_gb | int * 2 }}G --config
       with_dict: "{{ penta_vm }}"
