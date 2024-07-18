@@ -120,9 +120,10 @@
 
     - name: Create temporary file name for optimized image
       set_fact:
-        convert_image: "{{ vm_disk_path.vm | dirname }}/{{ vm_disk_path.vm | basename }}_less"
+        convert_image: "{{ vm_disk_path.vm | dirname }}/{{ item.value.qcow_name }}"
       when: optimize_needed
-
+      with_dict: "{{ penta_vm }}"
+      
     - name: Optimize qcow2 image (convert to thin provisioning)
       command: >
         qemu-img convert -O qcow2 -o preallocation=off "{{ vm_disk_path.vm }}" "{{ convert_image }}"
