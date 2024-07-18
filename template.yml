@@ -151,7 +151,8 @@
         mv "{{ convert_image }}" "{{ vm_disk_path.vm }}"
         mv "{{ vm_disk_path.vm }}" "{{ item.value.qcow_name }}.{{ item.value.file_type }}"
       when: optimize_needed and optimize_result.rc == 0
-          
+      with_dict: "{{ penta_vm }}"
+      
     - name: Create temporary file name for expansiond image
       set_fact:
         expand_image: "{{ vm_disk_path.vm }}"
@@ -170,7 +171,7 @@
       register: vm_xml
       with_dict: "{{ penta_vm }}"
       when: optimize_needed
-
+      
     - name: Update VM configuration with new disk image
       virt:
         command: define
@@ -189,11 +190,12 @@
           mv "{{ expand_image }}" "{{ vm_disk_path.vm }}"
           mv "{{ vm_disk_path.vm }}" "{{ item.value.qcow_name }}.{{ item.value.file_type }}"
       when: expansion_needed and expansion_result.rc == 0
-
+      with_dict: "{{ penta_vm }}"
+      
     - name: If the image is the same size
       command: mv "{{ vm_disk_path.vm }}" "{{ item.value.qcow_name }}.{{ item.value.file_type }}"
       when:  "{{ (size_difference | int) == 0 }}" 
-      
+      with_dict: "{{ penta_vm }}"
       
     - name: Set VM memory
       command: virsh setmaxmem {{ item.value.new_vm_name }} {{ item.value.memory_gb | int * 2 }}G --config
