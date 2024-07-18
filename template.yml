@@ -173,7 +173,7 @@
       
     - name: Create temporary file name for expansiond image
       set_fact:
-        clone_image: "{{ item.value.disk_path }}"/"{{ item.value.qcow_name }}"."{{ item.value.file_type }}"
+        clone_image: "{{ item.value.disk_path}}/{{ item.value.qcow_name }}.{{ item.value.file_type }}"
       
     - name: Get current VM configuration
       virt:
