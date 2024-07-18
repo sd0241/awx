@@ -167,13 +167,13 @@
       
     - name: Rename optimized image to original name
       command: >
-         mv "{{ expand_image }}" "{{ item.value.disk_path}}"/"{{ item.value.qcow_name }}"."{{ item.value.file_type }}"
+         mv "{{ expand_image }}" "{{ item.value.disk_path }}"/"{{ item.value.qcow_name }}"."{{ item.value.file_type }}"
       when: expansion_needed and expansion_result.rc == 0
       with_dict: "{{ penta_vm }}"
       
     - name: Create temporary file name for expansiond image
       set_fact:
-        clone_image: "{{ item.value.disk_path}}"/"{{ item.value.qcow_name }}"."{{ item.value.file_type }}"
+        clone_image: "{{ item.value.disk_path }}"/"{{ item.value.qcow_name }}"."{{ item.value.file_type }}"
       
     - name: Get current VM configuration
       virt:
@@ -200,7 +200,7 @@
 
       
     - name: If the image is the same size
-      command: mv "{{ vm_disk_path.vm }}" "{{ item.value.disk_path}}/{{ item.value.qcow_name }}.{{ item.value.file_type }}"
+      command: mv "{{ vm_disk_path.vm }}" "{{ item.value.disk_path }}/{{ item.value.qcow_name }}.{{ item.value.file_type }}"
       when:  "{{ (size_difference | int) == 0 }}" 
       with_dict: "{{ penta_vm }}"
       
