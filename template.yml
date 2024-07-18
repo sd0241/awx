@@ -118,6 +118,7 @@
       set_fact:
         convert_image: "{{ item.value.disk_path}}/{{ item.value.qcow_name }}.{{ item.value.file_type }}"
       when: optimize_needed
+      with_dict: "{{ penta_vm }}"
       
     - name: Optimize qcow2 image (convert to thin provisioning)
       command: >
@@ -150,12 +151,13 @@
       command: >
         mv "{{ convert_image }}"  "{{ vm_disk_path }}"
       when: optimize_needed and optimize_result.rc == 0
-      with_dict: "{{ penta_vm }}"
+     # with_dict: "{{ penta_vm }}"
       
     - name: Create temporary file name for expansiond image
       set_fact:
         expand_image: "{{ item.value.disk_path}}/{{ item.value.qcow_name }}.{{ item.value.file_type }}"
       when: expansion_needed
+      with_dict: "{{ penta_vm }}"
       
     - name: Resize qcow2 image (if expansion is needed)
       command: >
