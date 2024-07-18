@@ -165,7 +165,7 @@
 
     - name: Get current VM configuration
       virt:
-        command: dumpxml
+        command: get_xml
         name: "{{ item.value.new_vm_name }}"
       register: vm_xml
       with_dict: "{{ penta_vm }}"
