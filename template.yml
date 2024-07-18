@@ -155,7 +155,7 @@
       
     - name: Create temporary file name for expansiond image
       set_fact:
-        expand_image: "{{ item.value.disk_path}}/{{ item.value.qcow_name }}.{{ item.value.file_type }}"
+        expand_image: "{{ vm_disk_path.vm }}"
       when: expansion_needed
       with_dict: "{{ penta_vm }}"
       
@@ -164,21 +164,12 @@
         qemu-img resize "{{ expand_image }}" {{ desired_size }}
       when: expansion_needed
       register: expansion_result
-
-    - name: Get current VM configuration(expand)
-      virt:
-        command: get_xml
-        name: "{{ item.value.new_vm_name }}"
-      register: vm_xml
-      with_dict: "{{ penta_vm }}"
-      when: expansion_needed
       
-    - name: Update VM configuration with new disk image
-      virt:
-        command: define
-        xml: >
-          {{ vm_xml.results[0].get_xml | regex_replace(vm_disk_path.vm, expand_image) }}
+    - name: Rename optimized image to original name
+      command: >
+         mv "{{ expand_image }}" "{{ item.value.disk_path}}"/"{{ item.value.qcow_name }}"."{{ item.value.file_type }}"
       when: expansion_needed and expansion_result.rc == 0
+      with_dict: "{{ penta_vm }}"
 
     - name: Remove old disk image
       file:
