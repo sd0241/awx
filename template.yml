@@ -125,7 +125,7 @@
       when: optimize_needed
 
     - name: Replace original image with optimized image
-      command: mv "{{ convert_image }}" "{{ vm_disk_path.vm | dirname }}/{{ item.value.qcow_name }}.qcow2"
+      command: mv "{{ vm_disk_path.vm | dirname }}/{{ convert_image }}" "{{ vm_disk_path.vm | dirname }}/{{ item.value.qcow_name }}.qcow2"
       when: optimize_needed
       with_dict: "{{ penta_vm }}"
       
@@ -140,14 +140,14 @@
       when: expansion_needed
 
     - name: Replace original image with expansioned image
-      command: mv "{{ expand_image }}" "{{ vm_disk_path.vm | dirname }}/{{ item.value.qcow_name }}.qcow2"
+      command: mv "{{ vm_disk_path.vm | dirname }}/{{ expand_image }}" "{{ vm_disk_path.vm | dirname }}/{{ item.value.qcow_name }}.qcow2"
       when: expansion_needed
       with_dict: "{{ penta_vm }}"
 
-    - name: Remove original image
-      command: rm -rf "{{ vm_disk_path.vm }}"
-      when: expansion_needed
-      failed_when: optimize_needed
+    - name: If the image is the same size
+      command: mv "{{ vm_disk_path.vm | dirname }}/{{ vm.disk_path.vm }}" "{{ vm_disk_path.vm | dirname }}/{{ item.value.qcow_name }}.qcow2"
+      when:  "{{ (size_difference | int) == 0 }}" 
+      
       
     - name: Set VM memory
       command: virsh setmaxmem {{ item.value.new_vm_name }} {{ item.value.memory_gb | int * 2 }}G --config
