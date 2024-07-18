@@ -123,12 +123,35 @@
       command: >
         qemu-img convert -O qcow2 -o preallocation=off "{{ vm_disk_path.vm }}" "{{ convert_image }}"
       when: optimize_needed
+      register: optimize_result
 
-    - name: Replace original image with optimized image
-      command: mv "{{ vm_disk_path.vm | dirname }}/{{ convert_image }}.{{ item.value.file_type }}" "{{ vm_disk_path.vm | dirname }}/{{ item.value.qcow_name }}.{{ item.value.file_type }}"
-      when: optimize_needed
+    - name: Get current VM configuration
+      virt:
+        command: dumpxml
+        name: "{{ item.value.new_vm_name }}"
+      register: vm_xml
       with_dict: "{{ penta_vm }}"
-      
+      when: optimize_needed
+
+    - name: Update VM configuration with new disk image
+      virt:
+        command: define
+        xml: >
+          {{ vm_xml.results[0].get_xml | regex_replace(vm_disk_path.vm, convert_image) }}
+      when: optimize_needed and optimize_result.rc == 0
+
+    - name: Remove old disk image
+      file:
+        path: "{{ vm_disk_path.vm }}"
+        state: absent
+      when: optimize_needed and optimize_result.rc == 0
+    
+    - name: Rename optimized image to original name
+      command: >
+        mv "{{ convert_image }}" "{{ vm_disk_path.vm }}"
+        mv "{{ vm_disk_path.vm }}" "{{ item.value.qcow_name }}.{{ item.value.file_type }}"
+      when: optimize_needed and optimize_result.rc == 0
+          
     - name: Create temporary file name for expansiond image
       set_fact:
         expand_image: "{{ vm_disk_path.vm }}"
@@ -136,16 +159,39 @@
       
     - name: Resize qcow2 image (if expansion is needed)
       command: >
-        qemu-img resize "{{ expannd_image }}" {{ desired_size }}
+        qemu-img resize "{{ expand_image }}" {{ desired_size }}
       when: expansion_needed
+      register: expansion_result
 
-    - name: Replace original image with expansioned image
-      command: mv "{{ vm_disk_path.vm | dirname }}/{{ expand_image }}.{{ item.value.file_type }}" "{{ vm_disk_path.vm | dirname }}/{{ item.value.qcow_name }}.{{ item.value.file_type }}"
-      when: expansion_needed
+    - name: Get current VM configuration
+      virt:
+        command: dumpxml
+        name: "{{ item.value.new_vm_name }}"
+      register: vm_xml
       with_dict: "{{ penta_vm }}"
+      when: optimize_needed
+
+    - name: Update VM configuration with new disk image
+      virt:
+        command: define
+        xml: >
+          {{ vm_xml.results[0].get_xml | regex_replace(vm_disk_path.vm, expand_image) }}
+      when: expansion_needed and expansion_result.rc == 0
+
+    - name: Remove old disk image
+      file:
+        path: "{{ vm_disk_path.vm }}"
+        state: absent
+      when: expansion_needed and expansion_result.rc == 0
+    
+    - name: Rename optimized image to original name
+      command: > 
+          mv "{{ expand_image }}" "{{ vm_disk_path.vm }}"
+          mv "{{ vm_disk_path.vm }}" "{{ item.value.qcow_name }}.{{ item.value.file_type }}"
+      when: expansion_needed and expansion_result.rc == 0
 
     - name: If the image is the same size
-      command: mv "{{ vm_disk_path.vm | dirname }}/{{ vm.disk_path.vm }}.{{ item.value.file_type }}" "{{ vm_disk_path.vm | dirname }}/{{ item.value.qcow_name }}.{{ item.value.file_type }}"
+      command: mv "{{ vm_disk_path.vm }}" "{{ item.value.qcow_name }}.{{ item.value.file_type }}"
       when:  "{{ (size_difference | int) == 0 }}" 
       
       
