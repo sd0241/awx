@@ -28,6 +28,7 @@
           - 'sed -i "/server .* iburst/d" /etc/chrony.conf'
           - 'sed -i "/^# Please consider.*$/a\server time.bora.net iburst" /etc/chrony.conf'
           - 'chmod o-rwx /usr/bin/su'
+          - 'ssh-keygen -R "{{ item.value.ip_address }}"
           - 'sed -i "s/SELINUX=enforcing/SELINUX=disabled/" /etc/selinux/config'
           - 'setenforce 0'
           - 'sed -i "s/^PASS_MAX_DAYS.*$/PASS_MAX_DAYS   90/" /etc/login.defs'
