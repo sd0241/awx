@@ -14,8 +14,8 @@
             sudo: ALL=(ALL) NOPASSWD:ALL
             shell: /bin/bash
             lock_passwd: true
-#            ssh_authorized_keys:
- #             - "{{ item.value.ssh_public_key }}"
+            ssh_authorized_keys:
+             - "{{ item.value.ssh_public_key }}"
           runcmd:
           - 'systemctl disable --now firewalld.service'
           - 'nmcli con add con-name "{{ item.value.network_name }}" ifname enp1s0 type ethernet connection.autoconnect yes'
