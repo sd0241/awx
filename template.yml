@@ -14,6 +14,8 @@
             sudo: ALL=(ALL) NOPASSWD:ALL
             shell: /bin/bash
             lock_passwd: true
+            ssh_authorized_keys:
+            - "{{ item.value.ssh_public_key }}"
 
           runcmd:
           - 'systemctl disable --now firewalld.service'
@@ -22,7 +24,7 @@
           - 'nmcli con down "{{ item.value.network_name }}"'
           - 'nmcli con up "{{ item.value.network_name }}"'
           - 'timedatectl set-timezone Asia/Seoul'
-
+          - 'sed -i "s/^PasswordAuthentication no/PasswordAuthentication yes/" /etc/ssh/sshd_config'
           - 'sed -i "/server .* iburst/d" /etc/chrony.conf'
           - 'sed -i "/^# Please consider.*$/a\server time.bora.net iburst" /etc/chrony.conf'
           - 'chmod o-rwx /usr/bin/su'
