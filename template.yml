@@ -25,7 +25,7 @@
           - 'nmcli con up "{{ item.value.network_name }}"'
           - 'timedatectl set-timezone Asia/Seoul'
           - 'sed -i "s/^PasswordAuthentication no/PasswordAuthentication yes/" /etc/ssh/sshd_config'
-          - [ service, sshd, restart ]
+          - 'systemctl restart sshd.service'
           - 'sed -i "/server .* iburst/d" /etc/chrony.conf'
           - 'sed -i "/^# Please consider.*$/a\server time.bora.net iburst" /etc/chrony.conf'
           - 'chmod o-rwx /usr/bin/su'
