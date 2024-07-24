@@ -10,7 +10,6 @@
           network: {config: disabled}
           users:
           - default
-            ssh_pwauth: true
           - name: admin
             groups: wheel
             sudo: ALL=(ALL) NOPASSWD:ALL
