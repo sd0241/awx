@@ -6,6 +6,7 @@
       copy:
         content: |
           #cloud-config
+          ssh_pwauth: True
           network: {config: disabled}
           users:
           - default
