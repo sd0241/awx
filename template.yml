@@ -26,6 +26,7 @@
           - 'timedatectl set-timezone Asia/Seoul'
           - 'sed -i "s/^PasswordAuthentication no/PasswordAuthentication yes/" /etc/ssh/sshd_config'
           - 'echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config.d/01-permitrootlogin.conf'
+          - 'echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config.d/50.cloud-init.conf'
           - 'systemctl restart sshd.service'
           - 'sed -i "/server .* iburst/d" /etc/chrony.conf'
           - 'sed -i "/^# Please consider.*$/a\server time.bora.net iburst" /etc/chrony.conf'
