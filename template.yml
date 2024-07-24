@@ -6,7 +6,6 @@
       copy:
         content: |
           #cloud-config
-          ssh_pwauth: True
           network: {config: disabled}
           users:
           - default
@@ -17,6 +16,8 @@
             lock_passwd: true
             ssh_authorized_keys:
             - "{{ item.value.ssh_public_key }}"
+          ssh_pwauth: true
+
 
           runcmd:
           - 'systemctl disable --now firewalld.service'
