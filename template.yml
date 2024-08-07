@@ -193,7 +193,7 @@
       with_dict: "{{ penta_vm }}"
       
     - name: Set VM memory
-      command: virsh setmaxmem {{ item.value.new_vm_name }} {{ item.value.memory_gb | int * 2 }}G --config
+      command: virsh setmaxmem {{ item.value.new_vm_name }} {{ item.value.memory_gb  }}G --config
       with_dict: "{{ penta_vm }}"
 
     - name: Set VM current memory
